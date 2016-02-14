@@ -75,7 +75,7 @@ the control =(ALTER-VALUE FUNCTION)=).
 Consider the problem of computing the square root of a number =S=
 using Heron's method:
 
-#+BEGIN_QUOTE
+#+BEGIN_EXAMPLE
            ---
     x = \/  S  :
 
@@ -86,7 +86,7 @@ using Heron's method:
 
     x  = 1
      0
-#+END_QUOTE
+#+END_EXAMPLE
 
 The following function implements it:
 
@@ -110,11 +110,11 @@ The following function implements it:
 #+END_SRC
 
 If want to find square root of 4,
-#+BEGIN_QUOTE
+#+BEGIN_EXAMPLE
 > (sqrt-heron 4d0)
 2.0d0
 ((:CONVERGED-NUMBER))
-#+END_QUOTE
+#+END_EXAMPLE
 
 If we want to peek into how the computation proceeds, we can add the
 logging function:
@@ -141,7 +141,7 @@ logging function:
 
 Then, the output and the result will look as follows:
 
-#+BEGIN_QUOTE
+#+BEGIN_EXAMPLE
 > (sqrt-heron 4d0)
 INIT: x = 1.0d0
 x = 2.5d0
@@ -152,7 +152,6 @@ x = 2.000000000000002d0
 x = 2.0d0
 2.0d0
 ((:CONVERGED-NUMBER))
-
-#+END_QUOTE
+#+END_EXAMPLE
 
 Check the system =CL-ITERATIVE-TESTS= for more examples.
