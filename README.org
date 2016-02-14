@@ -1,0 +1,158 @@
+#+TITLE: CL-ITERATIVE
+
+* Introduction
+All linearly iterative algorithms can be transformed into the form
+=x=f(x)= for some value =x= and some function =f(x)=. This system
+provides a way to perform an iterative algorithm as a process of
+finding the solution of this equation.
+
+Furthermore, many existing implementations provide very limited
+control over how iterations are performed: what if the value is bound
+and the iterative step takes it out the boundaries? what if one wants
+to log the progress of computation? what if the computation needs to
+be stopped after some iterations?.. =CL-ITERATIVE= system provides the
+refined control over the progress of iterations by means of special
+structures called (unsurprisingly) /controls/.
+
+* Modus operandi
+
+The key idea of the method is to perform the computation only if
+=ITERATOR:ITERATOR= object is in state =CONTINUE= and stop otherwise
+(for category theory lovers and purists: =ITERATOR:ITERATOR= is
+amalgamated =Either= monad on top of another =Either= monad).
+
+The state of computation can be changed by means of controls. This
+system provides the following controls:
+- =FINISHED-VALUE= :: successfully stops the computation if certain
+     condition on computation value is reached.
+- =FAILED-VALUE= :: stops the computation with a failure if certain
+     condition on computation value is reached.
+- =LIMIT-ITERATIONS= :: stops the computation with a failure if number
+     of iterations exceeds the limit.
+- =LOG-COMPUTATION= :: logs the progress of iterative computation, can
+     be viewed as a probe.
+- =CONVERGED-VALUE= :: successfully stops the computation if the value
+     has converged in some sense (using user-specified predicate of
+     closeness =CLOSE-P=; for mathematical purists: user specifies the
+     topology of the computation space).
+- =CONVERGED-NUMBER= :: simplified version of =CONVERGED-VALUE= for
+     numbers where closeness is defined as =|x-y|<eps=.
+- =ALTER-VALUE= :: general control that changes the value according to
+     specified function. This control can be used, for example, to
+     keep the value bound.
+
+Packaged =CL-ITERATIVE-EX= provides the extension for some of these
+controls to add extra info to the =ITERATOR:ITERATOR= (or rather to
+extended =ITERATOREX:ITERATOREX=) computation object (useful to
+identify why computation had stoped).
+
+A control, in general, is any object on which two methods
+=INIT-CONTROL= and =APPLY-CONTROL= are specialized. This way the
+library of available controls can be extended by a user. A sequence of
+controls can be combined together into a single control using
+=COMBINE-CONTROLS=.
+
+Functions =ITERATE= and =FIXED-POINT= provide the entry point into
+iterative algorithms. =FIXED-POINT= is a bit more end-user
+oriented. It accepts as arguments:
+- =FUNCTION= :: the implementation of =f(x)=.
+- =INIT-VALUE= :: initial approximation.
+- =PRE-TREAT= :: the control applied before the iterative algorithm
+     starts.
+- =CONTROLS= :: a combined control that is applied after each update
+     of the value by =f(x)=. This control should contain the way to
+     stop the computation.
+- =POST-TREAT= :: final treat of the computation value after all the
+     iterations are finished.
+
+=ITERATE= is similar, except it accepts the initial computation object
+instead of =INIT-VALUE= and iterations are defined by controls only
+(in fact, =FIXED-POINT= calls =ITERATE= with =FUNCTION= wrapped into
+the control =(ALTER-VALUE FUNCTION)=).
+
+* Example
+
+Consider the problem of computing the square root of a number =S=
+using Heron's method:
+
+#+BEGIN_QUOTE
+           ---
+    x = \/  S  :
+
+           1 /      S   \
+    x    = - |x  + ---  |
+     n+1   2 \ n    x   /
+                     n
+
+    x  = 1
+     0
+#+END_QUOTE
+
+The following function implements it:
+
+#+BEGIN_SRC lisp
+  (defun sqrt-heron (s)
+    (flet ((improve (x)
+             (* 0.5d0 (+ x (/ s x)))))
+      (multiple-value-bind (final-x successful-p info)
+          (fixed-point
+           #'improve 1d0
+           :pre-treat (add-info)                       ; add stopping info
+           :controls (combine-controls
+                      (converged-number-with-id)       ; converge with default precision
+                      (limit-iterations-with-id 20)))  ; limit to 20 iterations
+        ;; Just in case did not converge: shouldn't happen for any reasonable S > 0
+        ;; due to quadratic convergence of the algorithm
+        (assert successful-p () "Could not find the square root of S = ~A" s)
+        ;; Just for illustrative purposes: return extra info - why computation
+        ;; was stopped?
+        (values final-x info))))
+#+END_SRC
+
+If want to find square root of 4,
+#+BEGIN_QUOTE
+> (sqrt-heron 4d0)
+2.0d0
+((:CONVERGED-NUMBER))
+#+END_QUOTE
+
+If we want to peek into how the computation proceeds, we can add the
+logging function:
+
+#+BEGIN_SRC lisp
+  (defun sqrt-heron (s)
+    (flet ((improve (x)
+             (* 0.5d0 (+ x (/ s x))))
+           (log-function (indicator x)           ; log computation
+             (if (eq indicator :init)
+                 (format t "~&INIT: x = ~A~%" x)
+                 (format t "~&x = ~A~%" x))))
+      (multiple-value-bind (final-x successful-p info)
+          (fixed-point
+           #'improve 1d0
+           :pre-treat (add-info)
+           :controls (combine-controls
+                      (log-computation #'log-function) ; add it before convergence test
+                      (converged-number-with-id)
+                      (limit-iterations-with-id 20)))
+        (assert successful-p () "Could not find the square root of S = ~A" s)
+        (values final-x info))))
+#+END_SRC
+
+Then, the output and the result will look as follows:
+
+#+BEGIN_QUOTE
+> (sqrt-heron 4d0)
+INIT: x = 1.0d0
+x = 2.5d0
+x = 2.05d0
+x = 2.000609756097561d0
+x = 2.0000000929222947d0
+x = 2.000000000000002d0
+x = 2.0d0
+2.0d0
+((:CONVERGED-NUMBER))
+
+#+END_QUOTE
+
+Check the system =CL-ITERATIVE-TESTS= for more examples.

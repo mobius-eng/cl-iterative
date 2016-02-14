@@ -1,0 +1,5 @@
+*.lisp~
+*.org~
+*.fasl
+*.fasl~
+*.gitignore~
