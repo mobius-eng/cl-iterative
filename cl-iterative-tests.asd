@@ -4,4 +4,4 @@
   :licence "GPLv3"
   :version "0.1.0"
   :depends-on (:cl-iterative :fiveam)
-  :components ((:file "cl-iterative-tests.lisp")))
+  :components ((:file "cl-iterative-tests")))

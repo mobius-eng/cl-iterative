@@ -14,6 +14,9 @@ be stopped after some iterations?.. =CL-ITERATIVE= system provides the
 refined control over the progress of iterations by means of special
 structures called (unsurprisingly) /controls/.
 
+The library was tested with SBCL (1.2.14) and ECL (15.3.7) on Linux
+(Ubuntu 15.10 x86-64).
+
 * Modus operandi
 
 The key idea of the method is to perform the computation only if
